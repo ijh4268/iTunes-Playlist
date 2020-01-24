@@ -1,4 +1,6 @@
-import plistlib, matplotlib
+import plistlib, sys, re, argparse
+from matplotlib import pyplot as plt
+import numpy as np
 
 def findDuplicates(file):
     print(f"Finding duplicate tracks in {file}")
@@ -60,12 +62,85 @@ def findCommonTracks(files):
         commonTracks = set.intersection(*trackNameSets)
         # write to file
         if len(commonTracks) > 0:
-            with open("common.txt", "w") as f:
+            with open("common.txt", "wb") as f:
                 for val in commonTracks:
-                    f.write(f"{val}".encode("UTF-8"))
+                    s = "%s\n" % val
+                    f.write(s.encode("utf-8"))
             print(f"{len(commonTracks)} common tracks found. "
                     "Track names written to common.txt.")
         else:
             print("No common tracks!")
 
-    
+def plotStats(file):
+    # read playlist
+    plist = plistlib.readPlist(file)
+    # get tracks from playtlist
+    tracks = plist["Tracks"]
+    # create lists of song ratings and track duration
+    ratings = []
+    durations = []
+    # iterate through tracks
+    for trackId, track in tracks.items():
+        try:
+            ratings.append(track["Play Count"])
+            durations.append(track["Total Time"])
+        except:
+            pass   
+    # make sure data collected was valid
+    if ratings == [] or durations == []:
+        print(f"No valid Play Count/Total Time data in {file}")
+        return
+
+    # scatter plot
+    x = np.array(durations, np.int32)
+    # convert to minutes
+    x = x/60000.0
+    y = np.array(ratings, np.int32)
+    plt.subplot(1, 1, 1)
+    plt.plot(x, y, "o")
+    plt.axis([0, 1.05*np.max(x), -1, 110])
+    plt.xlabel("Track duration")
+    plt.ylabel("Track plays")
+
+    # plot histogram
+    plt.subplot(2, 1, 2)
+    plt.hist(x, bins=20)
+    plt.xlabel("Track duration")
+    plt.ylabel("Count")
+
+    # show plot
+    plt.show()
+
+def main():
+    # create parser 
+    descStr = """
+    This program analyzes playlist files (.xml) exported from iTunes
+    """
+    parser = argparse.ArgumentParser(description=descStr)
+    # add a mutually exclusive group of arguments
+    group = parser.add_mutually_exclusive_group()
+
+    # add expected arguments
+    group.add_argument('--common', nargs="*", dest="plFiles", required=False)
+    group.add_argument("--stats", dest="plFile", required=False)
+    group.add_argument('--dup', dest="plFileD", required=False)
+
+    # parse args
+    args = parser.parse_args()
+
+    if args.plFiles:
+        # find common tracks
+        findCommonTracks(args.plFiles)
+    elif args.plFile:
+        # plot stats
+        plotStats(args.plFile)
+    elif args.plFileD:
+        #find duplicate tracks
+        findDuplicates(args.plFileD)
+    else:
+        print("These are not the tracks you are looking for.")
+
+# main method 
+if __name__ == "__main__":
+    main()
+
