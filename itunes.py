@@ -3,6 +3,9 @@ from matplotlib import pyplot as plt
 import numpy as np
 
 def findDuplicates(file):
+    """
+    Finds the duplicate songs in a playlist by comparing track name and duration and writing the duplicates to dups.txt
+    """
     print(f"Finding duplicate tracks in {file}")
     # read in playlist
     plist = plistlib.readPlist(file)
@@ -42,6 +45,9 @@ def findDuplicates(file):
                 f.write(f"[{val[0]}] {val[1]}\n")
 
 def findCommonTracks(files):
+    """
+    Determine if which tracks are in common between playlists using the track name and duration and writing the matching tracks to common.txt
+    """
     # a list of sets of track names
     trackNameSets = []
     for file in files:
@@ -52,9 +58,12 @@ def findCommonTracks(files):
         # get tracks
         tracks = plist["Tracks"]
         # iterate through tracks
-        for trackId, track in tracks.items():
+        for trackId, track, in tracks.items():
             try:
-                trackNames.add(track["Name"])
+                name = track["Name"]
+                duration = track["Total Time"]
+                trackInfo = (name, duration)
+                trackNames.add(trackInfo)
             except:
                 pass
             trackNameSets.append(trackNames)
@@ -64,7 +73,7 @@ def findCommonTracks(files):
         if len(commonTracks) > 0:
             with open("common.txt", "wb") as f:
                 for val in commonTracks:
-                    s = "%s\n" % val
+                    s = "%s\n" % val[0]
                     f.write(s.encode("utf-8"))
             print(f"{len(commonTracks)} common tracks found. "
                     "Track names written to common.txt.")
@@ -72,6 +81,9 @@ def findCommonTracks(files):
             print("No common tracks!")
 
 def plotStats(file):
+    """
+    Plot some statistics by reading track information from a playlist
+    """
     # read playlist
     plist = plistlib.readPlist(file)
     # get tracks from playtlist
@@ -96,7 +108,7 @@ def plotStats(file):
     # convert to minutes
     x = x/60000.0
     y = np.array(ratings, np.int32)
-    plt.subplot(1, 1, 1)
+    plt.subplot(2, 1, 1)
     plt.plot(x, y, "o")
     plt.axis([0, 1.05*np.max(x), -1, 110])
     plt.xlabel("Track duration")
