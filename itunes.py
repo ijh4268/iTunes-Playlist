@@ -1,6 +1,7 @@
 import plistlib, sys, re, argparse
 from matplotlib import pyplot as plt
 import numpy as np
+import statistics as stat
 
 def findDuplicates(file):
     """
@@ -88,31 +89,46 @@ def plotStats(file):
     plist = plistlib.readPlist(file)
     # get tracks from playtlist
     tracks = plist["Tracks"]
-    # create lists of song ratings and track duration
-    ratings = []
+    # create lists of song plays and track duration
+    plays = []
     durations = []
     # iterate through tracks
     for trackId, track in tracks.items():
         try:
-            ratings.append(track["Play Count"])
+            plays.append(track["Play Count"])
             durations.append(track["Total Time"])
         except:
             pass   
     # make sure data collected was valid
-    if ratings == [] or durations == []:
+    if plays == [] or durations == []:
         print(f"No valid Play Count/Total Time data in {file}")
         return
+
+    # calculate correlation coeffecient
+    # first calculate the means of the two data sets
+    mean_durations = stat.mean(durations)
+    mean_plays = stat.mean(plays)
+    # correlation is covariance/stdev_x * stdev_y
+    covariance = 0
+    for play, dur in zip(plays, durations):
+        covariance = covariance + (play - mean_plays) * (dur - mean_durations)
+    covariance = covariance / len(plays) - 1
+    stdev_durations = stat.stdev(durations, mean_durations)
+    stdev_plays = stat.stdev(plays, mean_plays)
+    correlation = covariance / (stdev_durations * stdev_plays)
 
     # scatter plot
     x = np.array(durations, np.int32)
     # convert to minutes
     x = x/60000.0
-    y = np.array(ratings, np.int32)
+    y = np.array(plays, np.int32)
     plt.subplot(2, 1, 1)
     plt.plot(x, y, "o")
     plt.axis([0, 1.05*np.max(x), -1, 110])
     plt.xlabel("Track duration")
     plt.ylabel("Track plays")
+    plt.text(1, 90, r'$Cov$ = %f' % covariance)
+    plt.text(1, 80, r"$r$ = %f" % correlation)
 
     # plot histogram
     plt.subplot(2, 1, 2)
